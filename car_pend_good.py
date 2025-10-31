@@ -1,4 +1,5 @@
 import numpy as np
+import control as ct
 from scipy.integrate import solve_ivp
 
 # Define the control law as a Python function (equivalent to the MATLAB function handle).
@@ -38,12 +39,71 @@ if __name__ == '__main__':
     L = 2  # Pendulum length
     g = -10 # Gravity
     d = 1  # Damping coefficient
+    b = 1
+    A = [[0,          1,                 0, 0],
+         [0,       -d/M,           b*m*g/M, 0],
+         [0,          0,                 0, 1],
+         [0, -b*d/(M*L),           -b*(m+M)*g/(M*L), 0]]
+
+    B = [[0], [1/M], [0], [b/(M*L)]]
+
+    T, D = np.linalg.eig(A)
+
+    # 1. unstable cause there is an eig val that has positive real part like 2.4647
+    print(f'T:{T.real}')
+    print("\n")
+    ctrb_matrix = ct.ctrb(A,B)
+    print(f'ctrb: {ctrb_matrix}')
+
+    # 2. ctrb because ctrb matrix has full rank(4)
+    print(f'rank: {np.linalg.matrix_rank(ctrb_matrix)}')
     
+    #3. A,B is ctrb, we can place eig vals anywhere we want
+    eigs = np.array([-1.1, -1.2, -1.3, -1.4])
+    print(f'eigs: {eigs}')
+    
+    K = ct.place(A,B,eigs)
+    T, D = np.linalg.eig(A-B*K)
+    
+    #4. we see that eigs and T are the same
+    print(f'--T:{T.real}')
+    print("\n")
+
+    Q = [[1, 0, 0, 0],
+         [0, 1, 0, 0],
+         [0, 0, 10, 0],
+         [0, 0, 0, 100]]
+
+    R = 0.001
+
+    K, S, E = ct.lqr(A, B, Q, R)
+    print(f'K:{K}')
+    T, D = np.linalg.eig(A-B*K)
+
+    #5. now *all eig vals* have neg real eig vals, which means the system is stable
+    print(f'T:{T.real}')
+    print("\n")
+    
+    print(np.diag(D.real))
+    print("\n")
+    
+    d_r = D.real
+    print(d_r)
+    print("\n")
+    
+    diag_d = np.diag(D)
+    print(diag_d)
+    print("\n")
+    
+    diag_d_r = np.diag(d_r)
+    print(diag_d_r)
+    print("\n")
+
     # 2. Define control law parameters
     # Note: K and wr would typically be designed using control theory methods.
     # For this example, these are placeholder values.
     #K = np.array([[-10, -5, 50, 10]]) # Example gain matrix
-    K = np.array([[-31.6227766,   -73.58924546, 1004.80602597,  495.65703441]]) # Example gain matrix
+    #K = np.array([[-31.6227766,   -73.58924546, 1004.80602597,  495.65703441]]) # Example gain matrix
 
     wr = np.array([1, 0, np.pi, 0]) # Example reference state (e.g., upright position at origin)
     
